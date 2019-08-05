@@ -119,6 +119,7 @@ def plane_intersect(view, point, screen):
 
     point = shift_cartesian_system(point, view)
     screen = shift_cartesian_system(screen, view)
+    anti_view = (-view[0], -view[1], -view[2])
     view = (0.0,0.0,0.0)
     point_s = cartesian_to_spherical(*point)
     screen_s = cartesian_to_spherical(*screen)
@@ -136,4 +137,42 @@ def plane_intersect(view, point, screen):
         point_s[1],
         point_s[2]
         )
+    x, y, z = shift_cartesian_system((x, y, z), anti_view)
     return (x, y, z)
+
+def plane_point(view, point, screen):
+    """Get the relative position of a point's projection to another
+    point on an intersecting plane, relative to the plane's closest
+    point to the first point.
+
+    Args:
+        A point to use a base reference, the point to project, the
+        closest point on the plane to the reference point.
+    Returns:
+        The distance to the point closest to the projection that falls
+        within the same z-plane as the plane's reference point, and the
+        distance from that point to the projection. These values will be
+        negative if they have a greater phi-value or lesser theta-value
+        than the plane's reference point in a spherical system where the
+        overall reference point is the origin.
+    """
+
+    projection = plane_intersect(view, point, screen)
+    i_line = cross_vector(
+        (view[0] - screen[0], view[1] - screen[1], view[2] - screen[2]),
+        (0, 0, 1)
+        )
+    s_t_p = (
+        projection[0] - screen[0],
+        projection[1] - screen[1],
+        projection[2] - screen[2]
+        )
+    dot = 0
+    for num in range(3):
+        dot += i_line[num]*s_t_p[num]
+    l_i_line = (i_line[0]**2 + i_line[1]**2 + i_line[2]**2)**0.5
+    l_s_t_p = (s_t_p[0]**2 + s_t_p[1]**2 + s_t_p[2]**2)**0.5
+    angle = math.acos(dot / (l_i_line*l_s_t_p))
+    distance_in_z = l_s_t_p*math.sin(angle)
+    distance_in_xy = l_s_t_p*math.cos(angle)
+    return distance_in_z, distance_in_xy
